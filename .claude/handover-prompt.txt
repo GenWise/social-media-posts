@@ -1,0 +1,6 @@
+# Handover: social-media-posts
+**Checkpoint:** 2026-03-23 16:24 IST
+
+**Current task:** unknown
+
+**To resume:** Check TODO.md for full task list, PROJECT_PLAN.md for implementation plan.
