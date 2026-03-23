@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GW Pipeline</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "primary": "#1466b8",
+            "background-light": "#f6f7f8",
+          },
+          fontFamily: { "display": ["Inter", "sans-serif"] },
+          borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" },
+          boxShadow: { soft: "0 8px 30px rgba(24,24,27,0.04)" },
+        },
+      },
+    };
+  </script>
+  <style>
+    body { font-family: "Inter", sans-serif; min-height: 100dvh; }
+    .material-symbols-outlined { font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24; }
+    .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .view { display: none; }
+    .view.active { display: flex; flex-direction: column; min-height: 100dvh; }
+    .slide-up { transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+    .slide-up.open { transform: translateY(0); }
+    .overlay { opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
+    .overlay.open { opacity: 1; pointer-events: auto; }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-background-light text-slate-900">
+
+<!-- ═══════════════════════════════════════════════
+     MAIN VIEW  (Queue + History)
+═══════════════════════════════════════════════ -->
+<div id="view-main" class="view active">
+
+  <!-- Sticky header -->
+  <div class="sticky top-0 z-30 bg-background-light/95 backdrop-blur-md pt-4 px-4 pb-3 space-y-3">
+
+    <!-- Top bar -->
+    <div class="flex items-center justify-between h-12">
+      <h1 class="text-xl font-bold tracking-tight">GW Pipeline</h1>
+      <div class="flex items-center gap-2">
+        <span id="last-updated" class="text-[11px] text-slate-400 hidden sm:block"></span>
+        <button onclick="fetchData()" title="Refresh"
+          class="w-9 h-9 flex items-center justify-center rounded-full bg-white shadow-soft text-slate-400 hover:text-primary transition-colors">
+          <span id="refresh-icon" class="material-symbols-outlined text-[18px]">refresh</span>
+        </button>
+        <button onclick="openFilters()" title="Filters"
+          class="relative w-9 h-9 flex items-center justify-center rounded-full bg-white shadow-soft text-slate-400 hover:text-primary transition-colors">
+          <span class="material-symbols-outlined text-[18px]">tune</span>
+          <span id="filter-badge"
+            class="hidden absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold items-center justify-center">
+          </span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex p-1 bg-slate-200/60 rounded-full">
+      <button id="tab-queue" onclick="switchTab('queue')"
+        class="flex-1 py-2 px-4 rounded-full bg-white shadow-sm text-sm font-semibold text-primary text-center transition-all">
+        Queue
+      </button>
+      <button id="tab-history" onclick="switchTab('history')"
+        class="flex-1 py-2 px-4 rounded-full text-sm font-medium text-slate-500 hover:text-slate-700 text-center transition-all">
+        History
+      </button>
+    </div>
+
+    <!-- Quick filters: platform -->
+    <div class="flex gap-2 overflow-x-auto hide-scrollbar -mx-4 px-4 pb-0.5">
+      <button onclick="quickFilter('platform','')" id="qfp-"
+        class="shrink-0 h-7 px-3.5 rounded-full bg-primary text-white text-xs font-semibold">All</button>
+      <button onclick="quickFilter('platform','TW')" id="qfp-TW"
+        class="shrink-0 h-7 px-3.5 rounded-full bg-white shadow-sm text-slate-600 text-xs font-semibold">TW</button>
+      <button onclick="quickFilter('platform','LI')" id="qfp-LI"
+        class="shrink-0 h-7 px-3.5 rounded-full bg-white shadow-sm text-slate-600 text-xs font-semibold">LI</button>
+      <button onclick="quickFilter('platform','YT')" id="qfp-YT"
+        class="shrink-0 h-7 px-3.5 rounded-full bg-white shadow-sm text-slate-600 text-xs font-semibold">YT</button>
+      <div class="shrink-0 w-px h-7 bg-slate-200 self-center mx-0.5"></div>
+      <button onclick="quickFilter('offering','')" id="qfo-"
+        class="shrink-0 h-7 px-3.5 rounded-full bg-white shadow-sm text-slate-600 text-xs font-semibold">All</button>
+      <button onclick="quickFilter('offering','M3')" id="qfo-M3"
+        class="shrink-0 h-7 px-3.5 rounded-full bg-white shadow-sm text-slate-600 text-xs font-semibold">M3</button>
+      <button onclick="quickFilter('offering','GSP')" id="qfo-GSP"
+        class="shrink-0 h-7 px-3.5 rounded-full bg-white shadow-sm text-slate-600 text-xs font-semibold">GSP</button>
+      <button onclick="quickFilter('offering','TNP365')" id="qfo-TNP365"
+        class="shrink-0 h-7 px-3.5 rounded-full bg-white shadow-sm text-slate-600 text-xs font-semibold">TNP365</button>
+      <button onclick="quickFilter('offering','GenAI')" id="qfo-GenAI"
+        class="shrink-0 h-7 px-3.5 rounded-full bg-white shadow-sm text-slate-600 text-xs font-semibold">GenAI</button>
+    </div>
+  </div>
+
+  <!-- Cards -->
+  <main class="px-4 pt-2 pb-10 space-y-3 flex-1">
+    <div id="loading" class="flex flex-col items-center justify-center py-20 text-slate-400">
+      <span class="material-symbols-outlined text-4xl spin mb-3">refresh</span>
+      <p class="text-sm">Loading…</p>
+    </div>
+    <div id="error-state" class="hidden"></div>
+    <div id="empty-state"
+      class="hidden flex-col items-center justify-center py-20 text-center px-6">
+      <span class="material-symbols-outlined text-5xl text-slate-300 mb-3">inbox</span>
+      <h3 class="text-base font-semibold text-slate-600 mb-1">Nothing here</h3>
+      <p class="text-sm text-slate-400">No posts match your current filters.</p>
+    </div>
+    <div id="cards-container" class="space-y-3"></div>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     DETAIL VIEW
+═══════════════════════════════════════════════ -->
+<div id="view-detail" class="view">
+  <header class="sticky top-0 z-30 bg-white border-b border-slate-100 px-4 py-3 flex items-center justify-between shadow-sm">
+    <button onclick="closeDetail()"
+      class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
+      <span class="material-symbols-outlined">arrow_back</span>
+    </button>
+    <div class="flex items-center gap-2">
+      <span id="detail-platform-icon"></span>
+      <h1 id="detail-title" class="text-sm font-semibold text-slate-800 font-mono"></h1>
+    </div>
+    <div class="w-10"></div>
+  </header>
+  <main id="detail-content"
+    class="flex-1 overflow-y-auto pb-12 px-4 py-5 space-y-4 max-w-2xl mx-auto w-full">
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     FILTER OVERLAY + BOTTOM SHEET
+═══════════════════════════════════════════════ -->
+<div id="filter-overlay"
+  class="overlay fixed inset-0 bg-slate-900/40 z-40"
+  onclick="closeFilters()"></div>
+
+<div id="filter-sheet"
+  class="slide-up fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white rounded-t-[28px] z-50 shadow-2xl max-h-[88vh] flex flex-col">
+  <div class="flex justify-center pt-3 pb-2">
+    <div class="h-1.5 w-10 rounded-full bg-slate-200"></div>
+  </div>
+  <div class="flex-1 overflow-y-auto px-6 pb-28 pt-1 space-y-6">
+    <h2 class="text-lg font-bold text-slate-900">Filters</h2>
+    <div>
+      <h3 class="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2.5">Status</h3>
+      <div class="flex flex-wrap gap-2" id="fp-status"></div>
+    </div>
+    <div>
+      <h3 class="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2.5">Offering</h3>
+      <div class="flex flex-wrap gap-2" id="fp-offering"></div>
+    </div>
+    <div>
+      <h3 class="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2.5">Campaign</h3>
+      <div class="flex flex-wrap gap-2" id="fp-campaign"></div>
+    </div>
+    <div>
+      <h3 class="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2.5">Person Featured</h3>
+      <div class="flex flex-wrap gap-2" id="fp-person"></div>
+    </div>
+    <div>
+      <h3 class="text-[11px] font-semibold text-slate-400 uppercase tracking-widest mb-2.5">Content Angle</h3>
+      <div class="flex flex-wrap gap-2" id="fp-angle"></div>
+    </div>
+  </div>
+  <div class="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-100 p-4 pb-7 flex gap-3">
+    <button onclick="resetFilters()"
+      class="h-11 px-6 rounded-full font-semibold text-slate-500 hover:bg-slate-50 transition-colors text-sm">
+      Reset
+    </button>
+    <button onclick="closeFilters()"
+      class="flex-1 h-11 rounded-full bg-primary text-white font-semibold text-sm transition-transform active:scale-95">
+      Apply
+    </button>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────
+// Option A: gviz/tq — works only if sheet is "Anyone with link can view"
+const SHEET_ID   = "1ersqOc7F9-BxDNji9hJ2Ti9dA4G5-zQDNW3i9O8LIXg";
+const SHEET_NAME = "POSTS_MASTER";
+const GVIZ_URL   = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
+
+// Option B: Apps Script proxy — paste your deployment URL here after setup
+// Set DATA_SOURCE = "apps-script" and fill APPS_SCRIPT_URL to use it.
+const DATA_SOURCE     = "apps-script";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxCzwF7o0VmVQRu3ItQl4zHasNcsC2ybV7zBqPKrlM9RjbXO03MVGb7Z949WavIUZVSdg/exec";
+
+// ─── STATE ───────────────────────────────────────────────────
+let allPosts = [];
+let currentTab = "queue";
+let filters = { platform:"", offering:"", status:"", campaign:"", person:"", angle:"" };
+
+// ─── FETCH ───────────────────────────────────────────────────
+async function fetchData() {
+  setRefreshing(true);
+  try {
+    let posts;
+    if (DATA_SOURCE === "apps-script" && APPS_SCRIPT_URL) {
+      // Apps Script proxy path
+      const res  = await fetch(APPS_SCRIPT_URL);
+      const json = await res.json();
+      posts = json.posts;
+    } else {
+      // gviz/tq path (sheet must be publicly viewable)
+      const res  = await fetch(GVIZ_URL);
+      const text = await res.text();
+      const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?\s*$/);
+      if (!match) throw new Error("Sheet is not publicly viewable. Set up the Apps Script proxy (see docs/apps-script-proxy.js) or make the sheet 'Anyone with link can view'.");
+      const json = JSON.parse(match[1]);
+      const cols = json.table.cols.map(c => c.label || c.id);
+      posts = (json.table.rows || []).map(row => {
+        const obj = {};
+        cols.forEach((col, i) => {
+          const cell = row.c ? row.c[i] : null;
+          obj[col] = (cell && (cell.f !== null && cell.f !== undefined ? cell.f : cell.v) !== null)
+            ? String(cell.f !== null && cell.f !== undefined ? cell.f : cell.v ?? "")
+            : "";
+        });
+        return obj;
+      });
+    }
+    allPosts = posts.filter(r => r.post_id);
+
+    document.getElementById("last-updated").textContent =
+      "Updated " + new Date().toLocaleTimeString("en-IN", { timeZone:"Asia/Kolkata", hour:"2-digit", minute:"2-digit" }) + " IST";
+
+    buildFilterPills();
+    renderCards();
+  } catch(e) {
+    showError(e.message);
+  } finally {
+    setRefreshing(false);
+  }
+}
+
+// ─── RENDER CARDS ────────────────────────────────────────────
+function filtered() {
+  return allPosts.filter(p => {
+    if (filters.platform && p.platform !== filters.platform) return false;
+    if (filters.offering && p.offering !== filters.offering) return false;
+    if (filters.status   && p.status   !== filters.status)   return false;
+    if (filters.campaign && p.campaign !== filters.campaign)  return false;
+    if (filters.person   && p.person_featured !== filters.person) return false;
+    if (filters.angle    && p.content_angle !== filters.angle) return false;
+    if (currentTab === "queue")   return ["DRAFT","READY","SCHEDULED"].includes(p.status);
+    if (currentTab === "history") return p.status === "POSTED";
+    return true;
+  });
+}
+
+function renderCards() {
+  document.getElementById("loading").classList.add("hidden");
+  document.getElementById("error-state").classList.add("hidden");
+  const container = document.getElementById("cards-container");
+  const empty     = document.getElementById("empty-state");
+
+  let posts = filtered();
+  if (currentTab === "queue")   posts.sort((a,b) => (a.scheduled_time||"").localeCompare(b.scheduled_time||""));
+  if (currentTab === "history") posts.sort((a,b) => (b.posted_time||"").localeCompare(a.posted_time||""));
+
+  if (!posts.length) {
+    container.innerHTML = "";
+    empty.classList.remove("hidden"); empty.classList.add("flex");
+    return;
+  }
+  empty.classList.add("hidden"); empty.classList.remove("flex");
+  container.innerHTML = posts.map(card).join("");
+}
+
+function card(p) {
+  const previewText = (p.final_post_text || p.hook || "").substring(0, 160);
+  const more        = (p.final_post_text || "").length > 160;
+  const dateVal     = currentTab === "queue" ? p.scheduled_time : p.posted_time;
+  const dateLabel   = (dateVal || "—").substring(0, 16);
+
+  const liveBtn = (currentTab === "history" && p.post_url)
+    ? `<a href="${esc(p.post_url)}" target="_blank" rel="noopener"
+         onclick="event.stopPropagation()"
+         class="flex items-center gap-1 text-primary text-xs font-medium hover:underline shrink-0">
+         View live <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+       </a>`
+    : `<div class="flex items-center gap-1.5 text-slate-400">
+         <span class="material-symbols-outlined text-[14px]">calendar_today</span>
+         <span class="text-xs">${esc(dateLabel)}</span>
+       </div>`;
+
+  const metrics = (currentTab === "history" && (p.impressions || p.engagements))
+    ? `<div class="flex items-center gap-3 text-slate-400 text-[11px] mr-auto">
+        ${p.impressions ? `<span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[13px]">visibility</span>${esc(p.impressions)}</span>` : ""}
+        ${p.engagements ? `<span class="flex items-center gap-0.5"><span class="material-symbols-outlined text-[13px]">favorite</span>${esc(p.engagements)}</span>` : ""}
+       </div>` : "";
+
+  return `
+  <article onclick="openDetail('${esc(p.post_id)}')"
+    class="bg-white rounded-2xl p-4 shadow-soft cursor-pointer active:scale-[0.98] transition-transform border border-slate-50 hover:border-slate-200">
+    <div class="flex items-start justify-between gap-2 mb-2">
+      <div class="flex items-center gap-1.5 flex-wrap">
+        ${platformIcon(p.platform, "sm")}
+        ${statusBadge(p.status)}
+        ${p.lock_status === "LOCKED" ? `<span class="material-symbols-outlined text-[13px] text-slate-300">lock</span>` : ""}
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        ${p.offering ? `<span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-semibold">${esc(p.offering)}</span>` : ""}
+        ${p.media_type && p.media_type !== "none" && p.media_type !== "" ? `<span class="material-symbols-outlined text-[14px] text-slate-300">attachment</span>` : ""}
+      </div>
+    </div>
+    ${p.person_featured ? `<p class="text-xs font-semibold text-slate-500 mb-1">${esc(p.person_featured)}</p>` : ""}
+    <p class="text-[14px] leading-relaxed text-slate-700 line-clamp-3 mb-3">${esc(previewText)}${more ? "…" : ""}</p>
+    <div class="flex items-center justify-between pt-2 border-t border-slate-50">
+      ${metrics}
+      ${liveBtn}
+    </div>
+  </article>`;
+}
+
+// ─── DETAIL VIEW ─────────────────────────────────────────────
+const COL_GROUPS = {
+  "Identity":        ["post_id","idea_id","variant_id","platform","status","lock_status"],
+  "Content":         ["hook","body","cta","final_post_text","hashtags","mentions","render_version"],
+  "Media":           ["media_type","media_drive_url","media_public_url","duration_sec","aspect_ratio","srt_url"],
+  "Classification":  ["offering","post_type","content_angle","campaign","person_featured"],
+  "Schedule & URLs": ["scheduled_time","posted_time","post_url","source_asset_id"],
+  "Metrics":         ["impressions","engagements"],
+  "System":          ["platform_constraints_ok","error_message","retry_count","owner","last_updated_by","last_updated_at","notes"],
+};
+
+function openDetail(postId) {
+  const p = allPosts.find(r => r.post_id === postId);
+  if (!p) return;
+
+  document.getElementById("detail-title").textContent = postId;
+  document.getElementById("detail-platform-icon").innerHTML = platformIcon(p.platform, "sm");
+
+  let html = "";
+  for (const [group, cols] of Object.entries(COL_GROUPS)) {
+    const rows = cols.map(col => {
+      const val = p[col] || "";
+      let rendered = "";
+
+      if (col === "final_post_text" || col === "body" || col === "hook") {
+        rendered = val
+          ? `<dd class="mt-1 text-[13px] leading-relaxed text-slate-700 whitespace-pre-wrap bg-slate-50 rounded-lg p-3 border border-slate-100">${esc(val)}</dd>`
+          : `<dd class="text-[12px] text-slate-300 italic">—</dd>`;
+      } else if (col === "post_url" && val) {
+        rendered = `<dd><a href="${esc(val)}" target="_blank" rel="noopener"
+          class="text-[13px] text-primary hover:underline flex items-center gap-1 break-all">
+          ${esc(val.length > 55 ? val.substring(0,55)+"…" : val)}
+          <span class="material-symbols-outlined text-[13px] shrink-0">open_in_new</span></a></dd>`;
+      } else if (col === "status") {
+        rendered = `<dd class="mt-0.5">${statusBadge(val)}</dd>`;
+      } else if (col === "lock_status") {
+        const locked = val === "LOCKED";
+        rendered = `<dd class="flex items-center gap-1 text-[13px] mt-0.5 ${locked ? "text-slate-400" : "text-emerald-600"}">
+          <span class="material-symbols-outlined text-[14px]">${locked ? "lock" : "lock_open"}</span>${esc(val || "—")}</dd>`;
+      } else if (col === "platform_constraints_ok") {
+        const color = val === "VALID" ? "text-emerald-600" : val === "INVALID" ? "text-red-500" : "text-amber-500";
+        rendered = `<dd class="text-[13px] font-medium mt-0.5 ${color}">${esc(val || "—")}</dd>`;
+      } else if (!val) {
+        rendered = `<dd class="text-[12px] text-slate-300 italic">—</dd>`;
+      } else {
+        rendered = `<dd class="text-[13px] text-slate-700 break-words mt-0.5">${esc(val)}</dd>`;
+      }
+
+      return `<div class="py-2.5"><dt class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">${col}</dt>${rendered}</div>`;
+    }).join("");
+
+    html += `
+    <section class="bg-white rounded-2xl px-4 py-1 shadow-soft border border-slate-50">
+      <h3 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest pt-3 pb-1.5 border-b border-slate-50 mb-0.5">${group}</h3>
+      <dl class="divide-y divide-slate-50">${rows}</dl>
+    </section>`;
+  }
+
+  document.getElementById("detail-content").innerHTML = html;
+  document.getElementById("view-main").classList.remove("active");
+  document.getElementById("view-detail").classList.add("active");
+  window.scrollTo(0, 0);
+}
+
+function closeDetail() {
+  document.getElementById("view-detail").classList.remove("active");
+  document.getElementById("view-main").classList.add("active");
+}
+
+// ─── FILTERS ─────────────────────────────────────────────────
+const FILTER_MAP = {
+  "fp-status":   { key:"status",   values: () => uniq(allPosts.map(p=>p.status)) },
+  "fp-offering": { key:"offering", values: () => uniq(allPosts.map(p=>p.offering)) },
+  "fp-campaign": { key:"campaign", values: () => uniq(allPosts.map(p=>p.campaign)) },
+  "fp-person":   { key:"person",   values: () => uniq(allPosts.map(p=>p.person_featured)) },
+  "fp-angle":    { key:"angle",    values: () => uniq(allPosts.map(p=>p.content_angle)) },
+};
+
+function buildFilterPills() {
+  for (const [id, { key, values }] of Object.entries(FILTER_MAP)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.innerHTML = values().map(v =>
+      `<button onclick="toggleFilter('${key}','${esc(v)}')"
+        class="h-8 px-4 rounded-full text-xs font-semibold transition-all ${filters[key]===v ? "bg-primary text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}">
+        ${esc(v)}
+      </button>`
+    ).join("");
+  }
+}
+
+function toggleFilter(key, val) {
+  filters[key] = filters[key] === val ? "" : val;
+  buildFilterPills();
+  updateBadge();
+  renderCards();
+}
+
+function quickFilter(key, val) {
+  filters[key] = val;
+  syncQuickBtns();
+  buildFilterPills();
+  updateBadge();
+  renderCards();
+}
+
+const QF_PLATFORMS = ["","TW","LI","YT"];
+const QF_OFFERINGS = ["","M3","GSP","TNP365","GenAI"];
+
+function syncQuickBtns() {
+  QF_PLATFORMS.forEach(v => styleQF(`qfp-${v}`, filters.platform === v));
+  QF_OFFERINGS.forEach(v => styleQF(`qfo-${v}`, filters.offering === v));
+}
+
+function styleQF(id, active) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (active) {
+    el.classList.remove("bg-white","shadow-sm","text-slate-600");
+    el.classList.add("bg-primary","text-white");
+  } else {
+    el.classList.remove("bg-primary","text-white");
+    el.classList.add("bg-white","shadow-sm","text-slate-600");
+  }
+}
+
+function updateBadge() {
+  const count = Object.values(filters).filter(Boolean).length;
+  const badge = document.getElementById("filter-badge");
+  if (count) {
+    badge.textContent = count;
+    badge.classList.remove("hidden"); badge.classList.add("flex");
+  } else {
+    badge.classList.add("hidden"); badge.classList.remove("flex");
+  }
+}
+
+function resetFilters() {
+  filters = { platform:"", offering:"", status:"", campaign:"", person:"", angle:"" };
+  syncQuickBtns(); buildFilterPills(); updateBadge(); renderCards();
+}
+
+function openFilters()  { document.getElementById("filter-sheet").classList.add("open");  document.getElementById("filter-overlay").classList.add("open"); }
+function closeFilters() { document.getElementById("filter-sheet").classList.remove("open"); document.getElementById("filter-overlay").classList.remove("open"); }
+
+// ─── TABS ────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  const active   = "flex-1 py-2 px-4 rounded-full bg-white shadow-sm text-sm font-semibold text-primary text-center transition-all";
+  const inactive = "flex-1 py-2 px-4 rounded-full text-sm font-medium text-slate-500 hover:text-slate-700 text-center transition-all";
+  document.getElementById("tab-queue").className   = tab === "queue"   ? active : inactive;
+  document.getElementById("tab-history").className = tab === "history" ? active : inactive;
+  renderCards();
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────
+function platformIcon(platform, size) {
+  const s = size === "sm" ? "w-6 h-6" : "w-7 h-7";
+  const i = size === "sm" ? "w-3 h-3"  : "w-3.5 h-3.5";
+  if (platform === "TW")
+    return `<div class="${s} flex items-center justify-center rounded-md bg-sky-100 shrink-0"><svg class="${i} fill-sky-700" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></div>`;
+  if (platform === "LI")
+    return `<div class="${s} flex items-center justify-center rounded-md bg-blue-100 shrink-0"><svg class="${i} fill-blue-700" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></div>`;
+  if (platform === "YT")
+    return `<div class="${s} flex items-center justify-center rounded-md bg-red-100 shrink-0"><svg class="${i} fill-red-700" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></div>`;
+  return `<div class="${s} flex items-center justify-center rounded-md bg-slate-100 shrink-0"><span class="material-symbols-outlined text-[13px] text-slate-400">public</span></div>`;
+}
+
+function statusBadge(status) {
+  const map = { DRAFT:"bg-amber-100 text-amber-700", READY:"bg-blue-100 text-blue-700", SCHEDULED:"bg-emerald-100 text-emerald-700", POSTED:"bg-slate-100 text-slate-500" };
+  return `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider uppercase ${map[status]||"bg-slate-100 text-slate-400"}">${status||"—"}</span>`;
+}
+
+function uniq(arr) { return [...new Set(arr.filter(Boolean))].sort(); }
+
+function esc(s) {
+  return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+}
+
+function setRefreshing(on) {
+  document.getElementById("refresh-icon").classList.toggle("spin", on);
+}
+
+function showError(msg) {
+  document.getElementById("loading").classList.add("hidden");
+  const el = document.getElementById("error-state");
+  el.classList.remove("hidden");
+  el.innerHTML = `
+    <div class="rounded-2xl bg-red-50 border border-red-100 p-5 text-red-700 text-sm">
+      <p class="font-semibold mb-1">Failed to load data</p>
+      <p class="text-xs text-red-500 mb-2">${esc(msg)}</p>
+      <p class="text-xs text-red-400">The sheet must be set to <strong>"Anyone with the link can view"</strong> for this dashboard to work.</p>
+    </div>`;
+}
+
+// ─── INIT ────────────────────────────────────────────────────
+fetchData();
+</script>
+</body>
+</html>
