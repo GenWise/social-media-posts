@@ -53,26 +53,21 @@ def upload_video(file_path: str) -> str:
     return media_id
 
 
-def post_tweet(text: str, media_id: str, retries: int = 5) -> dict:
-    """Post tweet via raw v2 API — media_ids nested under 'media' as required."""
-    oauth = OAuth1(API_KEY, API_SECRET, ACCESS_TOKEN, ACCESS_TOKEN_SECRET)
-    delay = 2
+def post_tweet(text: str, media_id: str, retries: int = 3) -> dict:
+    """Post tweet via tweepy Client (handles OAuth signing correctly for v2 + v1.1 media)."""
+    delay = 10
     for attempt in range(1, retries + 1):
-        resp = requests.post(
-            "https://api.twitter.com/2/tweets",
-            json={"text": text, "media": {"media_ids": [str(media_id)]}},
-            auth=oauth,
-        )
-        if resp.status_code == 201:
-            tweet_id = resp.json()["data"]["id"]
+        try:
+            resp = client.create_tweet(text=text, media_ids=[str(media_id)])
+            tweet_id = resp.data["id"]
             return {"success": True, "id": tweet_id, "url": f"https://x.com/Genwise_/status/{tweet_id}"}
-        if resp.status_code in (503, 500) and attempt < retries:
-            print(f"{resp.status_code} on attempt {attempt}, retrying in {delay}s...")
-            time.sleep(delay)
-            delay *= 2
-        else:
-            return {"success": False, "status_code": resp.status_code, "error": resp.text}
-    return {"success": False, "error": "Max retries exceeded"}
+        except tweepy.errors.TweepyException as e:
+            if attempt < retries:
+                print(f"Attempt {attempt} failed: {e}, retrying in {delay}s...")
+                time.sleep(delay)
+                delay *= 2
+            else:
+                return {"success": False, "error": str(e)}
 
 
 if __name__ == "__main__":
@@ -100,7 +95,7 @@ Give Your Child This Summer!
 #GiftedYouth #GenWise #GSP #GiftedSummerProgram"""
 
     media_id = upload_video(VIDEO_PATH)
-    print("Waiting 5s after upload before tweeting...")
-    time.sleep(5)
+    print("Waiting 15s after upload before tweeting...")
+    time.sleep(15)
     result = post_tweet(TWEET_TEXT, media_id)
     print(result)

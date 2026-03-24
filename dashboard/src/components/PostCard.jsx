@@ -1,9 +1,9 @@
-import { ExternalLink, Lock, Paperclip } from 'lucide-react'
+import { ExternalLink, Lock, Paperclip, Pencil } from 'lucide-react'
 import { PlatformIcon } from './PlatformIcon'
 import { StatusBadge } from './StatusBadge'
 import { formatDate } from '../lib/data'
 
-export function PostCard({ post, tab, onClick }) {
+export function PostCard({ post, tab, onClick, onEdit }) {
   const preview  = (post.final_post_text || post.hook || '').slice(0, 160)
   const more     = (post.final_post_text || '').length > 160
   const hasMedia = post.media_type && post.media_type !== 'none' && post.media_type !== ''
@@ -31,6 +31,15 @@ export function PostCard({ post, tab, onClick }) {
             </span>
           )}
           {hasMedia && <Paperclip size={13} className="text-slate-300" />}
+          {tab === 'queue' && onEdit && (
+            <button
+              onClick={e => { e.stopPropagation(); onEdit(post) }}
+              className="w-6 h-6 flex items-center justify-center rounded-md hover:bg-slate-100 text-slate-300 hover:text-primary transition-colors"
+              title="Edit post"
+            >
+              <Pencil size={12} />
+            </button>
+          )}
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import { Select } from './components/Select'
 import { DateRangeSelect, computeDateRange } from './components/DateRangeSelect'
 import { PostCard } from './components/PostCard'
 import { PostDetail } from './components/PostDetail'
+import { PostEdit } from './components/PostEdit'
 import { PlatformIcon, PLATFORM_LABELS } from './components/PlatformIcon'
 
 const PLATFORM_OPTIONS = PLATFORMS.map(p => ({ value: p, label: PLATFORM_LABELS[p] }))
@@ -17,6 +18,7 @@ export default function App() {
   const [updatedAt, setUpdatedAt] = useState(null)
   const [tab, setTab]             = useState('queue')
   const [detail, setDetail]       = useState(null)
+  const [editing, setEditing]     = useState(null)
 
   // Filters
   const [platform, setPlatform] = useState('')
@@ -185,12 +187,27 @@ export default function App() {
           </div>
         )}
         {!loading && visible.map(post => (
-          <PostCard key={`${post.post_id}-${post.platform}`} post={post} tab={tab} onClick={() => setDetail(post)} />
+          <PostCard key={`${post.post_id}-${post.platform}`} post={post} tab={tab}
+            onClick={() => setDetail(post)}
+            onEdit={tab === 'queue' ? p => setEditing(p) : null} />
         ))}
       </main>
 
       {/* Detail modal */}
       {detail && <PostDetail post={detail} onClose={() => setDetail(null)} />}
+
+      {/* Edit modal */}
+      {editing && (
+        <PostEdit
+          post={editing}
+          onClose={() => setEditing(null)}
+          onSaved={updated => {
+            setPosts(ps => ps.map(p =>
+              p.post_id === updated.post_id && p.platform === updated.platform ? { ...p, ...updated } : p
+            ))
+          }}
+        />
+      )}
     </div>
   )
 }

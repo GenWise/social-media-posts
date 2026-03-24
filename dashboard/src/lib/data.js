@@ -1,11 +1,34 @@
-const APPS_SCRIPT_URL =
+const APPS_SCRIPT_READ_URL =
   'https://script.google.com/macros/s/AKfycbxCzwF7o0VmVQRu3ItQl4zHasNcsC2ybV7zBqPKrlM9RjbXO03MVGb7Z949WavIUZVSdg/exec'
 
+const APPS_SCRIPT_WRITE_URL =
+  'https://script.google.com/macros/s/AKfycbxms84x4iyW5b2pzV_uXGeA_Zv44Q7BnnAF6uQFLQFz5qK48FzqlNyG_DxHBosxGC4BLw/exec'
+
 export async function fetchPosts() {
-  const res = await fetch(APPS_SCRIPT_URL)
+  const res = await fetch(APPS_SCRIPT_READ_URL)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const json = await res.json()
   return json.posts ?? []
+}
+
+export async function updatePost(post_id, platform, fields) {
+  const res = await fetch(APPS_SCRIPT_WRITE_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'update', post_id, platform, fields }),
+  })
+  const json = await res.json()
+  if (!json.success) throw new Error(json.error || 'Update failed')
+  return json
+}
+
+export async function markReady(post_id, platform, final_post_text, scheduled_time) {
+  const res = await fetch(APPS_SCRIPT_WRITE_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'mark_ready', post_id, platform, final_post_text, scheduled_time }),
+  })
+  const json = await res.json()
+  if (!json.success) throw new Error(json.error || 'Mark ready failed')
+  return json
 }
 
 // Format a date string like "2026-03-21 09:00" → "Sat Mar 21, 2026"
