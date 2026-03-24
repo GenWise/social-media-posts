@@ -130,8 +130,8 @@ export default function App() {
           )}
         </div>
 
-        {/* Filter row */}
-        <div className="flex items-center gap-2 flex-wrap max-w-2xl mx-auto">
+        {/* Filter row — all on one scrollable line */}
+        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar max-w-2xl mx-auto pb-0.5">
           <Select label="Platform" value={platform} onChange={setPlatform} options={PLATFORM_OPTIONS}
             renderOption={opt => <PlatformIcon platform={opt.value} size={14} />} />
           <Select label="Offering" value={offering} onChange={setOffering} options={OFFERING_OPTIONS} />
@@ -142,21 +142,17 @@ export default function App() {
           {persons.length > 0 && (
             <Select label="Person" value={person} onChange={setPerson} options={persons.map(p => ({ value: p, label: p }))} />
           )}
-
-          {/* Date range */}
-          <div className="flex items-center gap-1">
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              title="From date"
-              className="h-9 px-2 rounded-lg border border-slate-200 text-xs text-slate-600 focus:outline-none focus:border-primary transition-colors" />
-            <span className="text-slate-400 text-xs">→</span>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-              title="To date"
-              className="h-9 px-2 rounded-lg border border-slate-200 text-xs text-slate-600 focus:outline-none focus:border-primary transition-colors" />
-          </div>
-
+          <div className="shrink-0 w-px h-5 bg-slate-200 mx-0.5" />
+          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+            title="From date"
+            className="shrink-0 h-9 px-2 rounded-lg border border-slate-200 text-xs text-slate-600 focus:outline-none focus:border-primary transition-colors" />
+          <span className="text-slate-400 text-xs shrink-0">→</span>
+          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+            title="To date"
+            className="shrink-0 h-9 px-2 rounded-lg border border-slate-200 text-xs text-slate-600 focus:outline-none focus:border-primary transition-colors" />
           {activeFilters > 0 && (
             <button onClick={clearAll}
-              className="h-9 px-3 rounded-lg text-xs font-medium text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors border border-transparent hover:border-red-100">
+              className="shrink-0 h-9 px-3 rounded-lg text-xs font-medium text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors border border-transparent hover:border-red-100">
               Clear {activeFilters}
             </button>
           )}
