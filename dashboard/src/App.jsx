@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { RefreshCw, Search } from 'lucide-react'
 import { fetchPosts, PLATFORMS, OFFERINGS, QUEUE_STATUSES, HISTORY_STATUSES } from './lib/data'
 import { Select } from './components/Select'
+import { DateRangeSelect, computeDateRange } from './components/DateRangeSelect'
 import { PostCard } from './components/PostCard'
 import { PostDetail } from './components/PostDetail'
 import { PlatformIcon, PLATFORM_LABELS } from './components/PlatformIcon'
@@ -23,9 +24,10 @@ export default function App() {
   const [status,   setStatus]   = useState('')
   const [campaign, setCampaign] = useState('')
   const [person,   setPerson]   = useState('')
-  const [search,   setSearch]   = useState('')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo,   setDateTo]   = useState('')
+  const [search,      setSearch]      = useState('')
+  const [datePreset,  setDatePreset]  = useState('')
+  const [customFrom,  setCustomFrom]  = useState('')
+  const [customTo,    setCustomTo]    = useState('')
 
   async function load() {
     setLoading(true); setError(null)
@@ -60,6 +62,7 @@ export default function App() {
           if (!haystack.includes(q)) return false
         }
         // Date range — compare against the relevant date field
+        const { from: dateFrom, to: dateTo } = computeDateRange(datePreset, customFrom, customTo)
         const dateField = tab === 'queue' ? p.scheduled_time : p.posted_time
         if (dateFrom && dateField && dateField.slice(0,10) < dateFrom) return false
         if (dateTo   && dateField && dateField.slice(0,10) > dateTo)   return false
@@ -70,13 +73,13 @@ export default function App() {
         const db = (tab === 'queue' ? b.scheduled_time : b.posted_time) || ''
         return tab === 'queue' ? da.localeCompare(db) : db.localeCompare(da)
       })
-  }, [posts, tab, platform, offering, status, campaign, person, search, dateFrom, dateTo])
+  }, [posts, tab, platform, offering, status, campaign, person, search, datePreset, customFrom, customTo])
 
-  const activeFilters = [platform, offering, status, campaign, person, search, dateFrom, dateTo].filter(Boolean).length
+  const activeFilters = [platform, offering, status, campaign, person, search, datePreset].filter(Boolean).length
 
   function clearAll() {
     setPlatform(''); setOffering(''); setStatus(''); setCampaign(''); setPerson('')
-    setSearch(''); setDateFrom(''); setDateTo('')
+    setSearch(''); setDatePreset(''); setCustomFrom(''); setCustomTo('')
   }
 
   return (
@@ -143,13 +146,14 @@ export default function App() {
             <Select label="Person" value={person} onChange={setPerson} options={persons.map(p => ({ value: p, label: p }))} />
           )}
           <div className="shrink-0 w-px h-5 bg-slate-200 mx-0.5" />
-          <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-            title="From date"
-            className="shrink-0 h-9 px-2 rounded-lg border border-slate-200 text-xs text-slate-600 focus:outline-none focus:border-primary transition-colors" />
-          <span className="text-slate-400 text-xs shrink-0">→</span>
-          <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-            title="To date"
-            className="shrink-0 h-9 px-2 rounded-lg border border-slate-200 text-xs text-slate-600 focus:outline-none focus:border-primary transition-colors" />
+          <DateRangeSelect
+            preset={datePreset}
+            customFrom={customFrom}
+            customTo={customTo}
+            onChange={({ preset, customFrom: f, customTo: t }) => {
+              setDatePreset(preset); setCustomFrom(f); setCustomTo(t)
+            }}
+          />
           {activeFilters > 0 && (
             <button onClick={clearAll}
               className="shrink-0 h-9 px-3 rounded-lg text-xs font-medium text-slate-500 hover:text-red-500 hover:bg-red-50 transition-colors border border-transparent hover:border-red-100">
