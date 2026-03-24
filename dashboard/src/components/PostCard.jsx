@@ -1,14 +1,15 @@
 import { ExternalLink, Lock, Paperclip } from 'lucide-react'
 import { PlatformIcon } from './PlatformIcon'
 import { StatusBadge } from './StatusBadge'
+import { formatDate } from '../lib/data'
 
 export function PostCard({ post, tab, onClick }) {
   const preview  = (post.final_post_text || post.hook || '').slice(0, 160)
   const more     = (post.final_post_text || '').length > 160
   const hasMedia = post.media_type && post.media_type !== 'none' && post.media_type !== ''
 
-  const scheduledDate = post.scheduled_time ? post.scheduled_time.slice(0, 16) : null
-  const postedDate    = post.posted_time    ? post.posted_time.slice(0, 16)    : null
+  const scheduledDate = formatDate(post.scheduled_time, true)
+  const postedDate    = formatDate(post.posted_time, true)
 
   return (
     <article onClick={onClick}

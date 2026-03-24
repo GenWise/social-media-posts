@@ -88,7 +88,7 @@ export default function App() {
       <div className="sticky top-0 z-20 bg-white border-b border-slate-100 px-4 pt-4 pb-3 space-y-3">
         {/* Top bar */}
         <div className="flex items-center justify-between max-w-2xl mx-auto">
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">GW Pipeline</h1>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">GenWise Social Media Pipeline</h1>
           <div className="flex items-center gap-2">
             {updatedAt && <span className="text-[11px] text-slate-400 hidden sm:block">{updatedAt}</span>}
             <button onClick={load} disabled={loading}

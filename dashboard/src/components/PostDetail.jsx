@@ -1,10 +1,11 @@
 import { X, ExternalLink, Lock } from 'lucide-react'
 import { PlatformIcon, PLATFORM_LABELS } from './PlatformIcon'
 import { StatusBadge } from './StatusBadge'
+import { formatDate } from '../lib/data'
 
 export function PostDetail({ post, onClose }) {
   const date = post.posted_time || post.scheduled_time || ''
-  const dateLabel = date ? date.slice(0, 16) : null
+  const dateLabel = formatDate(date, true)
 
   return (
     <div

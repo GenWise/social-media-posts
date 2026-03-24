@@ -8,6 +8,24 @@ export async function fetchPosts() {
   return json.posts ?? []
 }
 
+// Format a date string like "2026-03-21 09:00" → "Sat Mar 21, 2026" (date only)
+// or "Sat Mar 21, 2026 09:00" when includeTime is true
+export function formatDate(str, includeTime = false) {
+  if (!str) return null
+  // Parse safely as local date (avoid UTC shift by replacing space with T)
+  const iso = str.slice(0, 16).replace(' ', 'T')
+  const d = new Date(iso)
+  if (isNaN(d)) return str.slice(0, 16)
+  const datePart = d.toLocaleDateString('en-IN', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+  }) // e.g. "Sat, 21 Mar 2026"
+  // Reformat to "Sat Mar 21, 2026"
+  const [wd, dayRaw, mon, yr] = datePart.replace(',', '').split(' ')
+  const formatted = `${wd} ${mon} ${dayRaw}, ${yr}`
+  if (!includeTime || str.length < 16) return formatted
+  return `${formatted} ${str.slice(11, 16)}`
+}
+
 export const QUEUE_STATUSES  = ['DRAFT', 'READY', 'SCHEDULED']
 export const HISTORY_STATUSES = ['POSTED']
 
