@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, Check } from 'lucide-react'
 
 const PRESETS = [
@@ -31,21 +32,35 @@ export function computeDateRange(preset, customFrom, customTo) {
 }
 
 export function DateRangeSelect({ preset, customFrom, customTo, onChange }) {
-  const [open, setOpen]       = useState(false)
+  const [open, setOpen]           = useState(false)
+  const [pos, setPos]             = useState({ top: 0, left: 0 })
   const [localFrom, setLocalFrom] = useState(customFrom)
   const [localTo,   setLocalTo]   = useState(customTo)
-  const ref = useRef(null)
+  const buttonRef = useRef(null)
+  const menuRef   = useRef(null)
 
   useEffect(() => {
-    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    if (!open) return
+    const handler = e => {
+      if (
+        buttonRef.current && !buttonRef.current.contains(e.target) &&
+        menuRef.current   && !menuRef.current.contains(e.target)
+      ) setOpen(false)
+    }
     document.addEventListener('pointerdown', handler)
     return () => document.removeEventListener('pointerdown', handler)
-  }, [])
+  }, [open])
+
+  function openMenu() {
+    if (open) { setOpen(false); return }
+    const rect = buttonRef.current.getBoundingClientRect()
+    setPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
+    setOpen(true)
+  }
 
   function selectPreset(p) {
     if (p === 'custom') {
       onChange({ preset: 'custom', customFrom: localFrom, customTo: localTo })
-      // keep open so user can set dates
     } else {
       onChange({ preset: p, customFrom: '', customTo: '' })
       setOpen(false)
@@ -61,9 +76,10 @@ export function DateRangeSelect({ preset, customFrom, customTo, onChange }) {
   const active  = !!preset
 
   return (
-    <div ref={ref} className="relative shrink-0">
+    <div className="relative shrink-0">
       <button
-        onClick={() => setOpen(o => !o)}
+        ref={buttonRef}
+        onClick={openMenu}
         className={`flex items-center gap-1.5 h-9 px-3 rounded-lg border text-sm font-medium transition-colors
           ${active
             ? 'bg-primary text-white border-primary'
@@ -74,9 +90,12 @@ export function DateRangeSelect({ preset, customFrom, customTo, onChange }) {
         <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''} ${active ? 'text-white/80' : 'text-slate-400'}`} />
       </button>
 
-      {open && (
-        <div className="absolute top-full right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 min-w-[180px] py-1 overflow-hidden">
-          {/* All time */}
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 9999, minWidth: 180 }}
+          className="bg-white border border-slate-200 rounded-xl shadow-lg py-1 overflow-hidden"
+        >
           <button
             onClick={() => { onChange({ preset: '', customFrom: '', customTo: '' }); setOpen(false) }}
             className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-50 text-slate-500"
@@ -99,7 +118,6 @@ export function DateRangeSelect({ preset, customFrom, customTo, onChange }) {
 
           <div className="h-px bg-slate-100 my-1" />
 
-          {/* Custom */}
           <button
             onClick={() => selectPreset('custom')}
             className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-50"
@@ -124,7 +142,8 @@ export function DateRangeSelect({ preset, customFrom, customTo, onChange }) {
               </button>
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

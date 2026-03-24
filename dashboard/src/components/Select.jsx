@@ -1,22 +1,39 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, Check } from 'lucide-react'
 
 export function Select({ label, options, value, onChange, renderOption }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
+  const [open, setOpen]   = useState(false)
+  const [pos, setPos]     = useState({ top: 0, left: 0, width: 0 })
+  const buttonRef = useRef(null)
+  const menuRef   = useRef(null)
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    if (!open) return
+    const handler = (e) => {
+      if (
+        buttonRef.current && !buttonRef.current.contains(e.target) &&
+        menuRef.current   && !menuRef.current.contains(e.target)
+      ) setOpen(false)
+    }
     document.addEventListener('pointerdown', handler)
     return () => document.removeEventListener('pointerdown', handler)
-  }, [])
+  }, [open])
+
+  function openMenu() {
+    if (open) { setOpen(false); return }
+    const rect = buttonRef.current.getBoundingClientRect()
+    setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width })
+    setOpen(true)
+  }
 
   const current = options.find(o => o.value === value)
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative shrink-0">
       <button
-        onClick={() => setOpen(o => !o)}
+        ref={buttonRef}
+        onClick={openMenu}
         className={`flex items-center gap-1.5 h-9 px-3 rounded-lg border text-sm font-medium transition-colors
           ${value
             ? 'bg-primary text-white border-primary'
@@ -34,8 +51,12 @@ export function Select({ label, options, value, onChange, renderOption }) {
         <ChevronDown size={14} className={`transition-transform ${open ? 'rotate-180' : ''} ${value ? 'text-white/80' : 'text-slate-400'}`} />
       </button>
 
-      {open && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 min-w-[160px] py-1 overflow-hidden">
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: 'fixed', top: pos.top, left: pos.left, minWidth: Math.max(pos.width, 160), zIndex: 9999 }}
+          className="bg-white border border-slate-200 rounded-xl shadow-lg py-1 overflow-hidden"
+        >
           <button
             onClick={() => { onChange(''); setOpen(false) }}
             className="w-full flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-50 text-slate-500"
@@ -57,7 +78,8 @@ export function Select({ label, options, value, onChange, renderOption }) {
               {value === opt.value && <Check size={14} className="text-primary shrink-0" />}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
