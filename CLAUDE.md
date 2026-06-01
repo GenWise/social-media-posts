@@ -66,3 +66,9 @@ Source (Zoom/transcript/video)
 
 - Twitter: OAuth 1.0a via `~/code/x-mcp-server/.env` (TWITTER_WORK_* from ~/.env)
 - Service account (Sheets): `~/.config/gcp/service-account-key.json`
+
+## Wiki
+Before cross-project lookups, tool use, or deployment: check `~/wiki/` for patterns and gotchas.
+For questions about other projects: `~/wiki/index.md` → find the project → read it.
+Write back: if you learn something new or find a wiki article wrong, update it before ending the session.
+Full lookup instructions in `~/CLAUDE.md`.

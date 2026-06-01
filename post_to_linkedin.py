@@ -8,13 +8,13 @@ Usage:
     python3 post_to_linkedin.py --text "..." --image /path/to/image.jpg
 
 @mentions in post text:
-    Use the format @[Display Name](urn:li:organization:XXXXX) for company mentions.
+    Use the format @[Display Name](urn:li:organization:XXXXX) for company mentions,
+    or @[Display Name](urn:li:member:XXXXX) for person mentions.
     e.g. "Attended @[Shiv Nadar School](urn:li:organization:3791226) last year"
     The script parses these, builds the annotation payload, and sends proper tagged mentions.
 
-    Known URNs:
-        Shiv Nadar School   urn:li:organization:3791226
-        GenWise             urn:li:organization:42797325
+    Known URNs are maintained in the CONTROL_PANEL tab of the GW-Social-Media sheet
+    (MENTION LIBRARY for people, LINKEDIN ORG LIBRARY for organizations).
 
 Token refresh is handled automatically.
 """
