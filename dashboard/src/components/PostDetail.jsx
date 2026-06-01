@@ -112,15 +112,17 @@ export function PostDetail({ post, onClose }) {
             <div className="bg-slate-50 rounded-xl p-3.5 space-y-0.5">
               <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-2">Posting checklist</p>
 
-              <CopyBlock
-                label={post.media_type === 'video' ? 'Video' : 'Images'}
-                icon={post.media_type === 'video' ? Film : Image}
-                text={post.media_drive_url}
-                isUrl={true}
-              />
+              {post.media_public_url && (
+                <CopyBlock
+                  label={`${post.media_type === 'video' ? 'Video' : 'Images'} — Finder path`}
+                  icon={post.media_type === 'video' ? Film : Image}
+                  text={post.media_public_url}
+                  isUrl={false}
+                />
+              )}
 
-              {post.media_public_url && post.media_public_url !== post.media_drive_url && (
-                <CopyBlock label="Local path" icon={Link2} text={post.media_public_url} isUrl={false} />
+              {post.media_drive_url && (
+                <CopyBlock label="Drive link" icon={Link2} text={post.media_drive_url} isUrl={true} />
               )}
 
               {comment && (
