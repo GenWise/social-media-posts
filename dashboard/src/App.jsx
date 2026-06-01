@@ -71,9 +71,25 @@ export default function App() {
         return true
       })
       .sort((a, b) => {
-        const da = (tab === 'queue' ? a.scheduled_time : a.posted_time) || ''
-        const db = (tab === 'queue' ? b.scheduled_time : b.posted_time) || ''
-        return tab === 'queue' ? da.localeCompare(db) : db.localeCompare(da)
+        if (tab === 'history') {
+          const da = a.posted_time || ''
+          const db = b.posted_time || ''
+          return db.localeCompare(da)
+        }
+        // Queue: today first, then overdue (nearest first), then future
+        const today = new Date().toISOString().slice(0, 10)
+        const da = (a.scheduled_time || '').slice(0, 10)
+        const db = (b.scheduled_time || '').slice(0, 10)
+        const aIsToday = da === today
+        const bIsToday = db === today
+        if (aIsToday && !bIsToday) return -1
+        if (!aIsToday && bIsToday) return 1
+        const aOverdue = da && da < today
+        const bOverdue = db && db < today
+        if (aOverdue && !bOverdue) return -1
+        if (!aOverdue && bOverdue) return 1
+        if (aOverdue && bOverdue) return db.localeCompare(da) // nearest overdue first
+        return da.localeCompare(db) // future: soonest first
       })
   }, [posts, tab, platform, offering, status, campaign, person, search, datePreset, customFrom, customTo])
 
