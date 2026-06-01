@@ -77,11 +77,16 @@ export default function App() {
           return db.localeCompare(da)
         }
         // Queue: today first, then overdue (nearest first), then future
-        // Use IST (UTC+5:30) since scheduled_time is stored in IST
-        const now = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
-        const today = now.toISOString().slice(0, 10)
-        const da = (a.scheduled_time || '').slice(0, 10)
-        const db = (b.scheduled_time || '').slice(0, 10)
+        // scheduled_time may be ISO "2026-06-01 10:00" or JS Date string "Mon Jun 01 2026..."
+        const toDateStr = s => {
+          if (!s) return ''
+          if (/^\d{4}-\d{2}/.test(s)) return s.slice(0, 10)
+          const d = new Date(s)
+          return isNaN(d) ? '' : d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+        }
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+        const da = toDateStr(a.scheduled_time)
+        const db = toDateStr(b.scheduled_time)
         const aIsToday = da === today
         const bIsToday = db === today
         if (aIsToday && !bIsToday) return -1
