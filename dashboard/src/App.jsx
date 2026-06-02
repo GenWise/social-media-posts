@@ -76,8 +76,6 @@ export default function App() {
           const db = b.posted_time || ''
           return db.localeCompare(da)
         }
-        // Queue: today first, then overdue (nearest first), then future
-        // scheduled_time may be ISO "2026-06-01 10:00" or JS Date string "Mon Jun 01 2026..."
         const toDateStr = s => {
           if (!s) return ''
           if (/^\d{4}-\d{2}/.test(s)) return s.slice(0, 10)
@@ -87,16 +85,16 @@ export default function App() {
         const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
         const da = toDateStr(a.scheduled_time)
         const db = toDateStr(b.scheduled_time)
-        const aIsToday = da === today
-        const bIsToday = db === today
-        if (aIsToday && !bIsToday) return -1
-        if (!aIsToday && bIsToday) return 1
         const aOverdue = da && da < today
         const bOverdue = db && db < today
-        if (aOverdue && !bOverdue) return -1
-        if (!aOverdue && bOverdue) return 1
-        if (aOverdue && bOverdue) return db.localeCompare(da) // nearest overdue first
-        return da.localeCompare(db) // future: soonest first
+        // Scheduled (today+future) comes before overdue
+        if (!aOverdue && bOverdue) return -1
+        if (aOverdue && !bOverdue) return 1
+        // Within scheduled: soonest first
+        if (!aOverdue && !bOverdue) return da.localeCompare(db)
+        // Within overdue: least overdue (nearest past) first
+        if (aOverdue && bOverdue) return db.localeCompare(da)
+        return 0
       })
   }, [posts, tab, platform, offering, status, campaign, person, search, datePreset, customFrom, customTo])
 
@@ -209,10 +207,54 @@ export default function App() {
             <p className="text-sm text-slate-400">No posts match your filters.</p>
           </div>
         )}
-        {!loading && visible.map(post => (
+        {!loading && tab === 'queue' && visible.length > 0 && (() => {
+          const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+          const toDateStr = s => {
+            if (!s) return ''
+            if (/^\d{4}-\d{2}/.test(s)) return s.slice(0, 10)
+            const d = new Date(s)
+            return isNaN(d) ? '' : d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+          }
+          const scheduled = visible.filter(p => {
+            const d = toDateStr(p.scheduled_time)
+            return !d || d >= today
+          })
+          const overdue = visible.filter(p => {
+            const d = toDateStr(p.scheduled_time)
+            return d && d < today
+          })
+          return <>
+            {scheduled.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 pt-2">
+                  <h2 className="text-sm font-semibold text-slate-600">Scheduled</h2>
+                  <span className="text-xs text-slate-400">{scheduled.length}</span>
+                </div>
+                {scheduled.map(post => (
+                  <PostCard key={`${post.post_id}-${post.platform}`} post={post} tab={tab}
+                    onClick={() => setDetail(post)}
+                    onEdit={p => setEditing(p)} />
+                ))}
+              </>
+            )}
+            {overdue.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 pt-4">
+                  <h2 className="text-sm font-semibold text-red-600">Overdue</h2>
+                  <span className="text-xs text-red-400">{overdue.length}</span>
+                </div>
+                {overdue.map(post => (
+                  <PostCard key={`${post.post_id}-${post.platform}`} post={post} tab={tab}
+                    onClick={() => setDetail(post)}
+                    onEdit={p => setEditing(p)} />
+                ))}
+              </>
+            )}
+          </>
+        })()}
+        {!loading && tab === 'history' && visible.map(post => (
           <PostCard key={`${post.post_id}-${post.platform}`} post={post} tab={tab}
-            onClick={() => setDetail(post)}
-            onEdit={tab === 'queue' ? p => setEditing(p) : null} />
+            onClick={() => setDetail(post)} />
         ))}
       </main>
 

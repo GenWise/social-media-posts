@@ -38,9 +38,8 @@ function CopyBlock({ label, icon: Icon, text, isUrl }) {
 function extractComment(notes) {
   if (!notes) return ''
   const patterns = [
-    /FIRST COMMENT:\s*(.+?)(?:\.|$)/i,
-    /COMMENT AFTER POSTING:\s*(.+?)(?:\.|$)/i,
-    /First comment:\s*(.+?)(?:\.|$)/i,
+    /FIRST COMMENT:\s*([\s\S]+)/i,
+    /COMMENT AFTER POSTING:\s*([\s\S]+)/i,
   ]
   for (const p of patterns) {
     const m = notes.match(p)
