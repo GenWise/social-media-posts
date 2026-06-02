@@ -54,6 +54,21 @@ Source (Zoom/transcript/video)
   → Posting automation   → status = POSTED, post_url filled
 ```
 
+## Media file rules (MANDATORY)
+
+- `media_public_url` = full Finder path via Google Drive CloudStorage (the user has Google Drive app on macOS)
+- Path format: `/Users/rajeshpanchanathan/Library/CloudStorage/GoogleDrive-rajesh@genwise.in/Shared drives/Digital Assets/<subfolder>/<file>`
+- **NEVER** leave files in My Drive root — move to appropriate subfolder under `Shared drives/Digital Assets/`
+- **NEVER** put local repo paths (`~/code/...`) in `media_drive_url` — that column is for `https://drive.google.com/...` URLs only
+- Before generating/polishing any post, verify media exists at the Finder path
+- Folder convention: `Social Media Collateal/YYYY-MM <topic>` for campaigns, `GSP'25 Testimonials/GenWise Testimonials/` for GSP testimonials, `Kumarans M3 testimonials/` for M3 content
+
+## Post content verification (MANDATORY)
+
+- **NEVER** generate content about programs/courses/offerings without checking the live website (genwise.in)
+- Course names, dates, locations change between editions — always verify current page
+- If genwise.in blocks WebFetch, use Chrome browser to read it
+
 ## Posting methods
 
 | Platform | Method |
