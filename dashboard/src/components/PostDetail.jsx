@@ -4,7 +4,7 @@ import { PlatformIcon, PLATFORM_LABELS } from './PlatformIcon'
 import { StatusBadge } from './StatusBadge'
 import { formatDate } from '../lib/data'
 
-function CopyBlock({ label, icon: Icon, text, isUrl }) {
+function CopyBlock({ label, icon: Icon, text, isUrl, finderPath }) {
   const [copied, setCopied] = useState(false)
   if (!text) return null
   const lines = text.split(',').map(s => s.trim()).filter(Boolean)
@@ -21,6 +21,11 @@ function CopyBlock({ label, icon: Icon, text, isUrl }) {
               className="text-[12px] text-primary hover:underline break-all leading-relaxed">
               {line}
             </a>
+          ) : finderPath ? (
+            <p className="text-[12px] text-slate-600 break-all leading-relaxed flex-1">
+              <span className="font-medium text-slate-700">{line.split('/').slice(-1)[0]}</span>
+              <span className="text-slate-400 text-[10px] block mt-0.5">{line}</span>
+            </p>
           ) : (
             <p className="text-[12px] text-slate-600 whitespace-pre-wrap break-all leading-relaxed flex-1">{line}</p>
           )}
@@ -29,7 +34,7 @@ function CopyBlock({ label, icon: Icon, text, isUrl }) {
       <button
         onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1500) }}
         className="mt-1 flex items-center gap-1 text-[11px] text-slate-400 hover:text-primary transition-colors">
-        {copied ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy</>}
+        {copied ? <><Check size={10} /> Copied</> : <><Copy size={10} /> {finderPath ? 'Copy path' : 'Copy'}</>}
       </button>
     </div>
   )
@@ -113,10 +118,10 @@ export function PostDetail({ post, onClose }) {
 
               {post.media_public_url && (
                 <CopyBlock
-                  label={`${post.media_type === 'video' ? 'Video' : 'Images'} — Finder path`}
+                  label={`${post.media_type === 'video' ? 'Video' : 'Image'} — Finder path`}
                   icon={post.media_type === 'video' ? Film : Image}
                   text={post.media_public_url}
-                  isUrl={false}
+                  finderPath={true}
                 />
               )}
 
