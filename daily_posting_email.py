@@ -186,10 +186,19 @@ def main():
         elif sched_date and sched_date < today:
             overdue_posts.append(p)
 
+    # Only mail when there is something to act on. A draft that has been overdue for more
+    # than two weeks is abandoned, not overdue - it was mailed every morning for months
+    # (2026-09-15) and nobody moved. Quiet mornings send nothing.
+    fresh_overdue = [p for p in overdue_posts
+                     if (today - parse_date(p.get("scheduled_time", ""))).days <= 14]
+    if not today_posts and not fresh_overdue:
+        print(f"[{now_ist}] Nothing due today, {len(overdue_posts)} stale overdue - no email")
+        return
+
     subject = f"GenWise Social Media — Today's Posts ({today_str})"
-    html = build_html(today_posts, overdue_posts, today_str)
+    html = build_html(today_posts, fresh_overdue, today_str)
     send_email(subject, html)
-    print(f"[{now_ist}] Sent daily email: {len(today_posts)} today, {len(overdue_posts)} overdue")
+    print(f"[{now_ist}] Sent daily email: {len(today_posts)} today, {len(fresh_overdue)} overdue")
 
 
 if __name__ == "__main__":
