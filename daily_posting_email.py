@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Daily posting plan email — reads POSTS_MASTER via Apps Script proxy,
-finds today's SCHEDULED/READY posts and overdue posts, sends summary
+lists the unposted pipeline (READY first), Mondays and Fridays
 via SMTP2GO to rajesh@genwise.in.
 
 Deployed on DO droplet as a cron job.
@@ -50,37 +50,7 @@ def fetch_posts():
             raise RuntimeError(f"Proxy failed after 2 attempts: {e}")
 
 
-def parse_date(s):
-    """Parse scheduled_time from various formats into a date in IST."""
-    if not s or not isinstance(s, str):
-        return None
-    s = s.strip()
-    for fmt in [
-        "%Y-%m-%d %H:%M",
-        "%Y-%m-%d",
-        "%Y-%m-%dT%H:%M:%S",
-        "%Y-%m-%dT%H:%M:%S.%f",
-    ]:
-        try:
-            dt = datetime.strptime(s, fmt)
-            return dt.date()
-        except ValueError:
-            continue
-    # JS Date string: "Mon Jun 01 2026 15:30:00 GMT+0530 (India Standard Time)"
-    try:
-        paren = s.find("(")
-        if paren > 0:
-            s = s[:paren].strip()
-        from email.utils import parsedate_to_datetime
-        dt = parsedate_to_datetime(s)
-        dt_ist = dt.astimezone(IST)
-        return dt_ist.date()
-    except Exception:
-        pass
-    return None
-
-
-def build_html(today_posts, overdue_posts, today_str):
+def build_html(ready_posts, scheduled_posts, draft_posts, today_str):
     table_style = (
         'style="border-collapse:collapse;width:100%;font-family:system-ui,sans-serif;font-size:14px"'
     )
@@ -113,22 +83,21 @@ def build_html(today_posts, overdue_posts, today_str):
             </tr>{rows}</table>"""
 
     html = f"""<div style="font-family:system-ui,sans-serif;max-width:700px;margin:0 auto">
-    <p>Good morning! Here's your posting plan for <strong>{today_str}</strong>.</p>"""
+    <p>Posting pipeline as of <strong>{today_str}</strong>. Post the READY ones first.</p>"""
 
-    if today_posts:
-        html += f"<h3>Today's Posts ({len(today_posts)})</h3>" + post_table(today_posts)
-    else:
-        html += "<p>No posts scheduled for today.</p>"
-
-    if overdue_posts:
-        html += f'<h3 style="color:#c0392b">Overdue Posts ({len(overdue_posts)})</h3>' + post_table(overdue_posts)
+    if ready_posts:
+        html += f"<h3>Ready to post ({len(ready_posts)})</h3>" + post_table(ready_posts)
+    if scheduled_posts:
+        html += f"<h3>Scheduled ({len(scheduled_posts)})</h3>" + post_table(scheduled_posts)
+    if draft_posts:
+        html += f'<h3 style="color:#888">Still in draft ({len(draft_posts)})</h3>' + post_table(draft_posts)
 
     html += f"""<p style="margin-top:20px">
         <a href="{DASHBOARD_URL}" style="background:#ff8d39;color:#fff;padding:10px 20px;text-decoration:none;border-radius:4px;display:inline-block">
             Open Dashboard
         </a>
     </p>
-    <p style="color:#888;font-size:12px;margin-top:30px">Automated daily summary from the GenWise social media pipeline.</p>
+    <p style="color:#888;font-size:12px;margin-top:30px">Sent Mondays and Fridays while the pipeline has anything unposted.</p>
     </div>"""
     return html
 
@@ -173,32 +142,23 @@ def main():
     posts = data.get("posts", [])
     active_statuses = {"DRAFT", "READY", "SCHEDULED"}
 
-    today_posts = []
-    overdue_posts = []
-
+    # Twice a week (cron: Mon and Fri), and only while there is something unposted. The
+    # old daily "today's posts" mail said "no posts today" 27 mornings out of 28 and
+    # re-listed the same June drafts as overdue every time (2026-09-15). This lists the
+    # whole open pipeline instead, READY first, so it gets exhausted.
+    by_status = {s: [] for s in active_statuses}
     for p in posts:
         status = (p.get("status") or "").upper()
-        if status not in active_statuses:
-            continue
-        sched_date = parse_date(p.get("scheduled_time", ""))
-        if sched_date == today:
-            today_posts.append(p)
-        elif sched_date and sched_date < today:
-            overdue_posts.append(p)
-
-    # Only mail when there is something to act on. A draft that has been overdue for more
-    # than two weeks is abandoned, not overdue - it was mailed every morning for months
-    # (2026-09-15) and nobody moved. Quiet mornings send nothing.
-    fresh_overdue = [p for p in overdue_posts
-                     if (today - parse_date(p.get("scheduled_time", ""))).days <= 14]
-    if not today_posts and not fresh_overdue:
-        print(f"[{now_ist}] Nothing due today, {len(overdue_posts)} stale overdue - no email")
+        if status in by_status:
+            by_status[status].append(p)
+    ready, scheduled, drafts = by_status["READY"], by_status["SCHEDULED"], by_status["DRAFT"]
+    if not ready and not scheduled and not drafts:
+        print(f"[{now_ist}] Pipeline empty - no email")
         return
 
-    subject = f"GenWise Social Media — Today's Posts ({today_str})"
-    html = build_html(today_posts, fresh_overdue, today_str)
-    send_email(subject, html)
-    print(f"[{now_ist}] Sent daily email: {len(today_posts)} today, {len(fresh_overdue)} overdue")
+    subject = f"GenWise Social Media — {len(ready)} ready, {len(scheduled)} scheduled, {len(drafts)} drafts ({today_str})"
+    send_email(subject, build_html(ready, scheduled, drafts, today_str))
+    print(f"[{now_ist}] Sent pipeline email: {len(ready)} ready, {len(scheduled)} scheduled, {len(drafts)} drafts")
 
 
 if __name__ == "__main__":
